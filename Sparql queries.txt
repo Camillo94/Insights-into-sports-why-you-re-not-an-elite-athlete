@@ -1,0 +1,665 @@
+#Sparql Queries
+
+#Skill-scores + Height, Weight, Gender, Nationality
+
+#Query 1
+#Football
+# skill-level: number of goals scored per match played
+# forwards, nationalteam, LaLiga, Premier League
+# male only
+
+Select ?goals_per_matches ?football ?nationality ?height ?weight
+where{
+Bind((?total_goals / ?total_matches) as ?goals_per_matches)
+  Filter (?total_matches > 200)
+  Filter (?goals_per_matches > 0)
+     {
+      SELECT (SUM(?goals) as ?total_goals) (SUM(?matches) as ?total_matches) ?football
+      (SAMPLE(?nationality) as ?nationality)(SAMPLE(?height) as ?height) (SAMPLE(?weight) as ?weight)
+      WHERE {
+             ?football wdt:P106 wd:Q937857 ;
+                       wdt:P569 ?date_of_birth ;
+                       wdt:P27 ?nationality;
+                       wdt:P413 wd:Q280658;
+                       wdt:P2048 ?height ;
+                       wdt:P2067 ?weight ;
+                       p:P54 ?team_statement.
+            ?team_statement ps:P54 ?team.
+            ?team wdt:P118 ?league;
+                  wdt:P31 ?nationalteam.
+            ?team_statement pq:P1351 ?goals;
+                            pq:P1350 ?matches;
+            Bind(year(?date_of_birth) as ?year_of_birth)
+            filter(?year_of_birth > 1970)
+            filter((?league = wd:Q324867 || ?league = wd:Q9448) && ?nationalteam = wd:Q6979593)
+           }
+           GROUP BY ?football
+           }
+  }
+  Order By desc (?goals_per_matches)
+
+#Query 2
+# skill-level: number of awards received
+# female only
+
+SELECT (count(?award) as ?total_awards) ?football (SAMPLE(?nationality) as ?nationality)(SAMPLE(?height) as ?height)
+(SAMPLE(?weight) as ?weight)
+WHERE {
+ ?football wdt:P106 wd:Q937857 ;
+           wdt:P569 ?date_of_birth ;
+           wdt:P27 ?nationality;
+           wdt:P21 wd:Q6581072;      #female
+           wdt:P2048 ?height ;
+           wdt:P2067 ?weight ;
+           wdt:P166 ?award.
+           Bind(year(?date_of_birth) as ?year_of_birth)
+           filter(?year_of_birth > 1970)
+     }
+     GROUP BY ?football
+     Order by desc (?total_awards)
+
+#Baseball
+#Query 3
+# skill-level: number of awards
+#delete Michael Jordan
+
+SELECT (Count(distinct ?award) as ?total_awards)?baseball (SAMPLE(?nationality) as ?nationality) (SAMPLE(?gender) as ?gender)
+(SAMPLE(?height) as ?height) (SAMPLE(?weight) as ?weight)
+WHERE {
+       ?baseball wdt:P106 wd:Q10871364;
+                 wdt:P569 ?date_of_birth;
+                 wdt:P2067 ?weight;
+                 wdt:P2048 ?height;
+                 wdt:P166 ?award;
+                 wdt:P21 ?gender;
+                 wdt:P27 ?nationality;
+                 wdt:P569 ?birth_date.
+       Bind (year(?birth_date) as ?birth_year)
+       Filter(?birth_year > 1970)
+       }
+       Group by ?baseball
+       Order by desc (?total_awards)
+
+
+
+
+#Swimmer
+#Query 4
+# Skill: number of gold medals
+
+SELECT (count(?awarded) as ?goldmedals) ?swimmer (SAMPLE(?nationality) as ?nationality)(SAMPLE(?gender) as ?gender)(sample(?height) as ?height)(sample(?weight) as ?weight)
+WHERE {
+       ?swimmer wdt:P106 wd:Q10843402;
+                wdt:P27 ?nationality;
+                wdt:P21 ?gender ;
+                wdt:P2048 ?height;
+                wdt:P2067 ?weight;
+                wdt:P21 ?gender;
+                p:P1344 ?competition_statement.
+       ?competition_statement pq:P166 ?awarded.
+        Filter (?awarded = wd:Q15243387)         #Goldmedal
+       }
+       group by ?swimmer
+       order by Desc (?goldmedals)
+
+
+#Jockey
+#Query 5
+#skill-level: number of participations
+SELECT (Count(distinct ?competition) as ?competitions) ?jockey (SAMPLE(?gender) as ?gender) (SAMPLE(?nationality) as ?nationality)(SAMPLE(?height) as ?height) (SAMPLE(?weight) as ?weight)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?jockey wdt:P106 wd:Q846750;
+          wdt:P27 ?nationality;
+          wdt:P2067 ?weight;
+          wdt:P2048 ?height;
+           wdt:P21 ?gender;
+          wdt:P1344 ?competition.
+
+       }
+Group by ?jockey
+Order by desc(?competitions)
+
+#Judoka
+# Skill: number of gold medals
+SELECT (count(?awarded) as ?goldmedals) ?judoka (SAMPLE(?nationality) as ?nationality)(SAMPLE(?gender) as ?gender)(sample(?height) as ?height)(sample(?weight) as ?weight)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?judoka wdt:P106 wd:Q6665249;
+wdt:P27 ?nationality;
+  wdt:P21 ?gender ;
+           wdt:P2048 ?height;
+           wdt:P2067 ?weight;
+            p:P1344 ?event1.
+  ?event1 pq:P166 ?awarded.
+  Filter (?awarded = wd:Q15243387 || ?awarded = wd:Q406039)
+       }
+group by ?judoka
+order by Desc (?goldmedals)
+
+#Cyclist
+# Skill: number of gold medals
+# all male
+SELECT (count(?awarded) as ?goldmedals) ?cyclist (sample(?nationality) as ?nationality)(SAMPLE(?gender) as ?gender) (sample(?height) as ?height)(sample(?weight) as ?weight)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?cyclist wdt:P106 wd:Q2309784;
+           wdt:P27 ?nationality;
+           wdt:P21 ?gender ;
+           wdt:P2048 ?height;
+           wdt:P2067 ?weight;
+           wdt:P21 ?gender;
+           p:P1344 ?event1.
+  ?event1 pq:P166 ?awarded.
+  Filter (?awarded = wd:Q15243387)
+       }
+group by ?cyclist
+order by desc(?goldmedals)
+
+
+#TENNIS
+# skill-level: average ranking
+# 500 female only 71 male
+Select ?ranking_number ?tennis_player ?nationality ?gender ?height ?weight
+where{
+  ?tennis_player wdt:P21 ?gender;
+                 wdt:P27 ?nationality;
+                 wdt:P2048 ?height;
+                 wdt:P2067 ?weight.
+  filter(?number_of_ranking_number > 1)
+  {
+SELECT (avg(?ranking_number) as ?ranking_number)(count(?ranking_number) as ?number_of_ranking_number) ?tennis_player  WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?tennis_player wdt:P106 wd:Q10833314;
+                 wdt:P569 ?date_of_birth;
+                 p:P1352 ?ranking_statement.
+  ?ranking_statement pq:P641 ?sport;
+                     ps:P1352 ?ranking_number.
+  BIND (year(?date_of_birth) as ?birthyear)
+  Filter(?sport = wd:Q18123880 || ?sport = wd:Q18123885)
+  Filter(?birthyear > 1970)
+
+}
+GROUP BY ?tennis_player
+}}
+order by ?ranking_number
+
+#Table-tennis
+# skill-level: average ranking
+SELECT (avg(?ranking_number) as ?average_ranking_number) ?table_tennis (SAMPLE(?nationality) as ?nationality)(sample(?gender) as ?gender) (sample(?height) as ?height) (sample(?weight) as ?weight)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?table_tennis wdt:P106 wd:Q13382519;
+wdt:P27 ?nationality;
+          wdt:P21 ?gender;
+          wdt:P569 ?birth_date;
+                wdt:P2048 ?height;
+                wdt:P2067 ?weight;
+          p:P1352 ?ranking_statement.
+  ?ranking_statement ps:P1352 ?ranking_number.
+  Bind (year(?birth_date) as ?birth_year)
+  Filter (?birth_year > 1970)
+  }
+Group by ?table_tennis
+order by asc (?average_ranking_number)
+
+
+#Basketball
+# skill-level: number of awards
+SELECT (Count(distinct ?award) as ?awards)?basketball(SAMPLE(?nationality) as ?nationality) (SAMPLE(?gender) as ?gender)(SAMPLE(?height) as ?height) (SAMPLE(?weight) as ?weight)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  BIND(wd:Q6581097 AS ?sex)
+  ?basketball wdt:P106 wd:Q3665646;
+wdt:P27 ?nationality;
+   wdt:P21 ?gender;
+              wdt:P569 ?birth_date;
+   wdt:P2067 ?weight;
+   wdt:P2048 ?height;
+          wdt:P166 ?award.
+  Bind (year(?birth_date) as ?birth_year)
+  Filter(?birth_year > 1970)
+}
+Group by ?basketball
+Order by desc(?awards)
+
+
+#Golf-Players
+#Skill: number of awards
+# only one female
+SELECT (Count(?award) as ?awards) ?golf_player (SAMPLE(?gender) as ?gender)(SAMPLE(?nationality) as ?nationality)
+(SAMPLE(?height) as ?height) (SAMPLE(?weight) as ?weight)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?golf_player wdt:P106 wd:Q11303721;
+              wdt:P569 ?date_of_birth;
+               wdt:P27 ?nationality;
+              wdt:P2067 ?weight;
+              wdt:P2048 ?height;
+              wdt:P166 ?award;
+              wdt:P21 ?gender.
+  Bind (year(?date_of_birth)as?birthyear)
+  Filter (?birthyear > 1960)
+}
+Group by ?golf_player
+Order by Desc (?awards)
+
+
+
+
+Peak-Performance age
+
+#Football
+#age of players when they won the Ballon d'or / Fifa ballon d'or
+SELECT (avg(?peak_age) as ?average_peak_age)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?football wdt:P106 wd:Q937857;
+  wdt:P569 ?date_of_birth;
+            p:P166 ?award_statement.
+    ?award_statement pq:P585 ?award_date;
+            ps:P166 ?award.
+  BIND (year(?date_of_birth) as ?birthyear)
+  BIND (year(?award_date) as ?eventyear)
+  BIND ((?eventyear - ?birthyear) as ?peak_age)
+    BIND(wd:Q166177 AS ?ballondor)
+BIND(wd:Q2291862 AS ?Fifa_ballondor)
+  Filter(?award = ?ballondor ||?award = ?Fifa_ballondor)
+  Filter(?birthyear > 1970)
+}
+
+#Football
+#age of players when they won the Fifa worldplayer / Female football player of the year
+#female
+SELECT (avg(?peak_age) as ?average_peak_age)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?football wdt:P106 wd:Q937857;
+  wdt:P569 ?date_of_birth;
+            wdt:P21 wd:Q6581072 ;
+            p:P166 ?award_statement.
+    ?award_statement pq:P585 ?award_date;
+            ps:P166 ?award.
+  BIND (year(?date_of_birth) as ?birthyear)
+  BIND (year(?award_date) as ?eventyear)
+  BIND ((?eventyear - ?birthyear) as ?peak_age)
+    BIND(wd:Q182529 AS ?fifa_worldplayer)
+BIND(wd:Q1478325 AS ?female_football_player_of_the_year)
+  Filter(?award = ?fifa_worldplayer ||?award = ?female_football_player_of_the_year)
+  Filter(?birthyear > 1970)
+}
+
+#Baseball
+# peak_age: age when player became 'Player of the year'
+# only male
+SELECT distinct (Avg(?peak_age)as ?peak_age)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?baseball wdt:P106 wd:Q10871364;
+              wdt:P569 ?date_of_birth;
+            p:P166 ?award_statement.
+  ?award_statement pq:P585 ?award_date;
+          ps:P166 wd:Q15140008.
+  BIND (year(?date_of_birth) as ?birth_year)
+  BIND (year(?award_date) as ?award_year)
+  BIND ((?award_year - ?birth_year) as ?peak_age)
+}
+
+#Baseball / Softball
+# peak_age: age when player became 'Player of the year'
+# only female
+SELECT  (avg(?peak_age) as ?peak_age)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?baseball wdt:P106 wd:Q13388586;
+              wdt:P569 ?date_of_birth;
+            wdt:P1344 ?competition.
+  ?competition wdt:P585 ?competition_date.
+  BIND (year(?date_of_birth) as ?birth_year)
+  BIND (year(?competition_date) as ?competition_year)
+  BIND ((?competition_year - ?birth_year) as ?peak_age)
+}
+
+#swimmer
+#average age of a swimmer when he/she won a gold medal
+SELECT distinct (Avg(?peak_age)as ?peak_age) ?gender
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+?swimmer     wdt:P106 wd:Q10843402;
+             wdt:P21 ?gender;
+             wdt:P569 ?birth_date;
+             p:P1344 ?competition_statement.
+?competition_statement pq:P166 ?award;
+          pq:P166 wd:Q15243387;
+          ps:P1344 ?competition.
+  ?competition wdt:P585 ?competition_date.
+  Bind(year(?competition_date) as ?competition_year)
+    Bind(year(?birth_date) as ?birth_year)
+  Bind((?competition_year - ?birth_year) as ?peak_age)
+  Filter(?birth_year > 1960)
+  }
+Group by ?gender
+
+#Jockey
+#peak_age: age when jockeys won a medal at olympics
+# male: 37 female 34
+SELECT (avg(?peak_age) as ?peak_age) ?gender
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?jockey wdt:P106 wd:Q846750;
+          wdt:P569 ?birthday;
+           wdt:P21 ?gender;
+          p:P1344 ?competition_statement.
+  ?competition_statement pq:P166 ?award;
+              ps:P1344 ?competition.
+  ?competition wdt:P585 ?competition_date.
+     BIND (year(?birthday) as ?birth_year)
+  BIND (year(?competition_date) as ?competition_year)
+  BIND ((?competition_year - ?birth_year) as ?peak_age)
+       }
+group by ?gender
+
+#Judoka
+# Skill: number of gold medals
+SELECT (avg(?peak_age) as ?avg_peak_age) ?gender
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?judoka wdt:P106 wd:Q6665249;
+          wdt:P21 ?gender;
+wdt:P569 ?date_of_birth;
+           p:P1344 ?event1.
+  ?event1 pq:P166 ?awarded;
+          ps:P1344 ?event.
+  ?event wdt:P585 ?event_date.
+  BIND (year(?date_of_birth) as ?birth_year)
+  BIND (year(?event_date) as ?event_year)
+  BIND ((?event_year - ?birth_year) as ?peak_age)
+  Filter (?awarded = wd:Q15243387 || ?awarded = wd:Q406039)
+       }
+group by ?gender
+
+
+#average age of a cyclist when he/she won a gold medal
+# female = male
+SELECT distinct (Avg(?peak_age)as ?peak_age) ?gender
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+?cyclist     wdt:P106 wd:Q2309784;
+             wdt:P21 ?gender;
+             wdt:P569 ?birth_date;
+             p:P1344 ?event1.
+  ?event1 pq:P166 ?award;
+          pq:P166 wd:Q15243387;
+          ps:P1344 ?competition.
+  ?competition wdt:P585 ?competition_date.
+  Bind(year(?competition_date) as ?competition_year)
+    Bind(year(?birth_date) as ?birth_year)
+  Bind((?competition_year - ?birth_year) as ?peak_age)
+  Filter(?birth_year > 1960)
+  }
+group by ?gender
+
+#TENNIS
+#Peaktime: the age when player was ranked as no.1 in tennis singles
+# the same for both genders: 23
+SELECT (avg(?peaktime) as ?peaktime) ?gender
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?tennis_player wdt:P106 wd:Q10833314;
+  wdt:P569 ?date_of_birth;
+  wdt:P21 ?gender ;
+  p:P1352 ?ranking_statement.
+  ?ranking_statement pq:P585 ?ranking_date;
+                     ps:P1352 ?ranking_number;
+                     pq:P641 wd:Q18123880.
+  BIND (year(?date_of_birth) as ?birth_year)
+  BIND (year(?ranking_date) as ?ranking_year)
+  BIND ((?ranking_year - ?birth_year) as ?peaktime)
+  Filter(?ranking_number = 1)
+  Filter(?birth_year > 1970)
+}
+group by ?gender
+
+#Table tennis player
+# peak-age: year of ranking between 1-5
+# male: 27 female: 24
+SELECT distinct (avg(?peak_age)as ?peak_age_per_gender) ?gender
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?tennis wdt:P106 wd:Q13382519;
+          wdt:P21 ?gender;
+          wdt:P569 ?birth_date;
+          p:P1352 ?ranking_statement.
+  ?ranking_statement pq:P580 ?ranking_date;
+                     ps:P1352 ?ranking.
+  Bind(year(?ranking_date) as ?ranking_year)
+    Bind(year(?birth_date) as ?birth_year)
+  Bind((?ranking_year - ?birth_year) as ?peak_age)
+  Filter(?ranking < 6)
+  }
+Group by ?gender
+
+#Basketball
+#Peak_age: age where basketballer received more than 3 awards
+Select (avg(?peak_age) as ?avg_peak_age) ?gender
+where{
+ BIND ((?award_year - ?birth_year) as ?peak_age)
+{
+SELECT distinct ?basketballer (sample(?gender) as ?gender) ?award_year (sample(?birth_year) as ?birth_year) (count(?award_year) as ?awardCount)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?basketballer wdt:P106 wd:Q3665646;
+          wdt:P569 ?birth_date;
+                 wdt:P21 ?gender;
+          p:P166 ?award_statement .
+     ?award_statement pq:P585 ?award_date.
+ BIND (year(?birth_date) as ?birth_year)
+ BIND ((?award_year - ?birth_year) as ?peak_age)
+  Bind (year(?award_date) as ?award_year)
+  Filter (?birth_year > 1960)
+} GROUP BY ?basketballer ?award_year
+  having (?awardCount > 3)
+}
+  }
+group by ?gender
+
+#Golf
+#Peak_age: age where golfer received more than two awards
+# female = male
+Select (avg(?peak_age) as ?avg_peak_age) ?gender
+where{
+ BIND ((?award_year - ?birth_year) as ?peak_age)
+{
+SELECT distinct ?golfer (sample(?gender) as ?gender) ?award_year (sample(?birth_year) as ?birth_year) (count(?award_year) as ?awardCount)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?golfer wdt:P106 wd:Q11303721;
+          wdt:P569 ?birth_date;
+                 wdt:P21 ?gender;
+          p:P166 ?award_statement .
+     ?award_statement pq:P585 ?award_date.
+  BIND (year(?birth_date) as ?birth_year)
+  BIND ((?award_year - ?birth_year) as ?peak_age)
+  Bind (year(?award_date) as ?award_year)
+  Filter (?birth_year > 1960)
+} GROUP BY ?golfer ?award_year
+  having (?awardCount > 1)
+}
+  }
+GROUP BY ?gender
+
+
+
+
+
+
+Country comparison
+
+#most played sports in the world
+SELECT distinct ?sportLabel (count(?player) as ?players)   WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?player wdt:P106 ?sportplayer.
+  #?player wdt:P27 ?country.
+{
+
+SELECT distinct ?sportplayer ?sportLabel WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?sportplayer wdt:P425 ?sport.
+  ?sport wdt:P31   wd:Q31629.
+  ?sportplayer wdt:P279 wd:Q2066131.
+}
+ # Limit 20
+ }
+  }
+group by ?sportLabel
+Order by ?players
+
+
+SELECT distinct ?sportLabel (count(?player) as ?players)
+(sample(?country) as ?country)(sample(?population) as ?population)
+(sample(?life_expectancy) as ?life_expectancy)(sample(?HDI) as ?HDI)
+(sample(?nominal_gdp) as ?nominal_gdp)
+WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?player wdt:P106 ?sportplayer.
+  ?player wdt:P27 ?country.
+     Optional{ ?country wdt:P1082 ?population. }
+   Optional{ ?country wdt:P2250 ?life_expectancy. }
+  Optional{ ?country wdt:P1081 ?HDI. }
+  Optional{ ?country wdt:P2131 ?nominal_gdp. }
+{
+
+SELECT distinct ?sportplayer ?sportLabel WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?sportplayer wdt:P425 ?sport.
+  ?sport wdt:P31   wd:Q31629;
+         wdt:P279 ?uppersport.
+  ?uppersport wdt:P279 wd:Q877517.
+  ?sportplayer wdt:P279 wd:Q2066131.
+}
+ }
+  }
+group by ?sportLabel ?country
+Order by ?players
+
+
+
+
+
+
+
+Select ?country (sample(?population) as ?population)(sample(?life_expectancy) as ?life_expectancy)(sample(?HDI) as ?HDI)
+(sample(?real_gdp) as ?real_gdp)(count(?footballplayer) as ?footballplayers) (count(?tennisplayer) as ?tennisplayers)
+(count(?tabletennis) as ?tabletennisplayers)(count(?swimmer) as ?swimmers)(count(?jockey) as ?jockeys)(count(?judoka) as ?judokas)
+(count(?basketball) as ?basketballs)(count(?baseball) as ?baseballs)(count(?cyclist) as ?cyclists)(count(?golf) as ?golf)
+(count(?cricketer) as ?cricketers)(count(?fieldhockey) as ?fieldhockey)(count(?volleyball) as ?volleyballs)
+(count(?handball) as ?handballs)(count(?badminton) as ?badmintons)(count(?boxer) as ?boxers)
+(count(?lacrosse) as ?lacrosses) (count(?ice_hockey) as ?ice_hockeys)(count(?rugby) as ?rugbys) (count(?aFootball) as ?aFootball)
+
+Where {
+{
+      ?footballplayer wdt:P106 wd:Q937857.
+      ?footballplayer wdt:P27 ?country.
+              }
+             Union
+             {
+      ?tennisplayer wdt:P106 wd:Q10833314.
+      ?tennisplayer wdt:P27 ?country.
+             }
+    Union
+  {
+      ?tabletennis wdt:P106 wd:Q13382519.
+      ?tabletennis wdt:P27 ?country.
+    }
+      Union
+  {
+      ?swimmer wdt:P106 wd:Q10843402.
+      ?swimmer wdt:P27 ?country.
+    }
+        Union
+  {
+      ?jockey wdt:P106 wd:Q846750.
+      ?jockey wdt:P27 ?country.
+    }
+          Union
+  {
+      ?judoka wdt:P106 wd:Q6665249.
+      ?judoka wdt:P27 ?country.
+    }
+          Union
+  {
+      ?basketball wdt:P106 wd:Q3665646.
+      ?basketball wdt:P27 ?country.
+    }
+          Union
+  {
+      ?cyclist wdt:P106 wd:Q2309784.
+      ?cyclist wdt:P27 ?country.
+    }
+            Union
+  {
+      ?baseball wdt:P106 wd:Q10871364.
+      ?baseball wdt:P27 ?country.
+    }
+              Union
+  {
+      ?golf wdt:P106 wd:Q11303721.
+      ?golf wdt:P27 ?country.
+    }
+                Union
+  {
+            ?cricketer wdt:P106 wd:Q12299841;
+                       wdt:P27 ?country.
+    }
+                Union
+  {
+            ?fieldhockey wdt:P106 wd:Q10843263;
+                   wdt:P27 ?country.
+    }
+                Union
+  {
+       ?volleyball wdt:P106 wd:Q15117302;
+                   wdt:P27 ?country.
+    }
+                Union
+  {
+        ?handball wdt:P106 wd:Q13365117;
+                   wdt:P27 ?country.
+    }
+                Union
+  {
+      ?badminton wdt:P106 wd:Q13141064;
+                   wdt:P27 ?country.
+    }
+                Union
+  {
+        ?boxer wdt:P106 wd:Q11338576;
+                   wdt:P27 ?country.
+    }
+                  Union
+  {
+       ?lacrosse wdt:P106 wd:Q17682262;
+                   wdt:P27 ?country.
+    }
+                  Union
+  {
+       ?ice_hockey wdt:P106 wd:Q11774891;
+                   wdt:P27 ?country.
+    }
+                  Union
+  {
+      ?rugby wdt:P106 wd:Q13415036;
+                   wdt:P27 ?country.
+    }
+  Union
+  {
+      ?aFootball wdt:P106 wd:Q19204627;
+                   wdt:P27 ?country.
+  }
+ ?country wdt:P1082 ?population.
+ Optional{ ?country wdt:P2250 ?life_expectancy. }
+  Optional{ ?country wdt:P1081 ?HDI. }
+  Optional{ ?country wdt:P2131 ?nominal_gdp. }
+
+  }
+GROUP BY ?country
